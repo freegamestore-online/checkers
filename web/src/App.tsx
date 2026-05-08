@@ -52,14 +52,7 @@ export default function App() {
             { label: "Wins", value: bestScore },
             { label: "Difficulty", value: DIFFICULTY_LABELS[difficulty] },
           ]}
-          actions={
-            <>
-              {phase !== "playing" && (
-                <button className="min-h-[2.75rem] min-w-[2.75rem]" onClick={start}>{phase === "menu" ? "Start" : "Play Again"}</button>
-              )}
-              <GameAuth />
-            </>
-          }
+          actions={<GameAuth />}
           rules={
             <div>
               <h3 style={{ fontWeight: 700 }}>Checkers</h3>
