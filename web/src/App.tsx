@@ -17,10 +17,11 @@ function getBestScore(): number {
 }
 
 export default function App() {
-  const [phase, setPhase] = useState<GamePhase>("menu");
+  const [phase, setPhase] = useState<GamePhase>("playing");
   const [won, setWon] = useState(false);
   const [bestScore, setBestScore] = useState(getBestScore);
-  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  const [difficulty] = useState<Difficulty>("medium");
+  const [gameKey, setGameKey] = useState(0);
   const { submitScore } = useLeaderboard("checkers");
 
   const handleGameOver = useCallback(
@@ -40,6 +41,7 @@ export default function App() {
 
   const start = useCallback(() => {
     setWon(false);
+    setGameKey((k) => k + 1);
     setPhase("playing");
   }, []);
 
@@ -85,55 +87,24 @@ export default function App() {
       }
     >
       <div className="relative w-full h-full">
-        {phase === "playing" ? (
-          <Game onGameOver={handleGameOver} difficulty={difficulty} />
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full gap-4">
-            <h1
-              className="text-4xl font-bold"
-              style={{ fontFamily: "Fraunces, serif" }}
+        <Game key={gameKey} onGameOver={handleGameOver} difficulty={difficulty} />
+        {phase === "over" && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4" style={{ background: "rgba(0,0,0,0.55)" }}>
+            <p
+              className="text-xl font-bold"
+              style={{
+                color: won ? "var(--success)" : "var(--error)",
+                fontFamily: "Fraunces, serif",
+              }}
             >
-              Checkers
-            </h1>
-            {phase === "over" && (
-              <p
-                className="text-xl font-bold"
-                style={{
-                  color: won ? "var(--success)" : "var(--error)",
-                  fontFamily: "Fraunces, serif",
-                }}
-              >
-                {won ? "You Win!" : "You Lose!"}
-              </p>
-            )}
-            <p style={{ color: "var(--muted)" }}>
-              Play checkers against the computer. Red moves first.
+              {won ? "You Win!" : "You Lose!"}
             </p>
-
-            {/* Difficulty picker */}
-            <div className="flex gap-2">
-              {(["easy", "medium", "hard"] as Difficulty[]).map((d) => (
-                <button
-                  key={d}
-                  onClick={() => setDifficulty(d)}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-colors min-h-[2.75rem]"
-                  style={{
-                    background: difficulty === d ? "var(--accent)" : "var(--panel)",
-                    color: difficulty === d ? "#fff" : "var(--ink)",
-                    border: `1px solid ${difficulty === d ? "var(--accent)" : "var(--line)"}`,
-                  }}
-                >
-                  {DIFFICULTY_LABELS[d]}
-                </button>
-              ))}
-            </div>
-
             <button
               onClick={start}
               className="px-6 py-3 rounded-xl font-semibold min-h-[2.75rem]"
               style={{ background: "var(--accent)", color: "#fff" }}
             >
-              {phase === "menu" ? "Start Game" : "Play Again"}
+              Play Again
             </button>
           </div>
         )}
