@@ -51,6 +51,15 @@ export default function App() {
               <GameAuth />
             </>
           }
+          rules={
+            <div>
+              <h3 style={{ fontWeight: 700 }}>Checkers</h3>
+              <h4 style={{ fontWeight: 600 }}>Rules</h4>
+              <ul><li>Play red vs computer (black)</li><li>Move diagonally forward; jump to capture (mandatory)</li><li>Reach the far row to king — kings move backward too</li><li>Capture all opponent pieces to win</li></ul>
+              <h4 style={{ fontWeight: 600 }}>Controls</h4>
+              <ul><li>Tap a piece to select, tap a valid square to move</li></ul>
+            </div>
+          }
         />
       }
     >
