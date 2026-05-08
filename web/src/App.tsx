@@ -55,7 +55,7 @@ export default function App() {
           actions={
             <>
               {phase !== "playing" && (
-                <button onClick={start}>{phase === "menu" ? "Start" : "Play Again"}</button>
+                <button className="min-h-[2.75rem] min-w-[2.75rem]" onClick={start}>{phase === "menu" ? "Start" : "Play Again"}</button>
               )}
               <GameAuth />
             </>
@@ -123,7 +123,7 @@ export default function App() {
                 <button
                   key={d}
                   onClick={() => setDifficulty(d)}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-colors min-h-[2.75rem]"
                   style={{
                     background: difficulty === d ? "var(--accent)" : "var(--panel)",
                     color: difficulty === d ? "#fff" : "var(--ink)",
@@ -137,7 +137,7 @@ export default function App() {
 
             <button
               onClick={start}
-              className="px-6 py-3 rounded-xl font-semibold"
+              className="px-6 py-3 rounded-xl font-semibold min-h-[2.75rem]"
               style={{ background: "var(--accent)", color: "#fff" }}
             >
               {phase === "menu" ? "Start Game" : "Play Again"}
