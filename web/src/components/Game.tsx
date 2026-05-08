@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useGameSounds } from "@freegamestore/games";
 import type { Board, Piece, Position, Move, Player, Difficulty } from "../types";
 import { DIFFICULTY_DEPTH } from "../types";
 
@@ -210,6 +211,7 @@ interface GameProps {
 }
 
 export function Game({ onGameOver, difficulty }: GameProps) {
+  const sounds = useGameSounds();
   const [board, setBoard] = useState<Board>(createInitialBoard);
   const [selected, setSelected] = useState<Position | null>(null);
   const [validMoves, setValidMoves] = useState<Move[]>([]);
@@ -228,6 +230,7 @@ export function Game({ onGameOver, difficulty }: GameProps) {
     if (gameOverRef.current || aiThinking) return;
     if (turn === "red" && allMoves.length === 0) {
       gameOverRef.current = true;
+      sounds.playGameOver();
       onGameOverRef.current(false); // Red can't move, red loses
     }
   }, [allMoves.length, turn, aiThinking]);
@@ -244,6 +247,7 @@ export function Game({ onGameOver, difficulty }: GameProps) {
       if (!move) {
         if (!gameOverRef.current) {
           gameOverRef.current = true;
+          sounds.playGameOver();
           onGameOverRef.current(true); // Computer can't move, player wins
         }
         aiActiveRef.current = false;
@@ -287,6 +291,11 @@ export function Game({ onGameOver, difficulty }: GameProps) {
       if (selected) {
         const move = validMoves.find((m) => m.to.row === row && m.to.col === col);
         if (move) {
+          if (move.captures.length > 0) {
+            sounds.playScore();
+          } else {
+            sounds.playMove();
+          }
           const newBoard = applyMove(board, move);
           setBoard(newBoard);
           setSelected(null);
