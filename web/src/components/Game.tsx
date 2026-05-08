@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import type { Board, Piece, Position, Move, Player } from "../types";
+import type { Board, Piece, Position, Move, Player, Difficulty } from "../types";
+import { DIFFICULTY_DEPTH } from "../types";
 
 // ── Board helpers ──────────────────────────────────────────────
 
@@ -183,7 +184,7 @@ function minimax(
   }
 }
 
-function aiBestMove(board: Board): Move | null {
+function aiBestMove(board: Board, depth: number): Move | null {
   const moves = getAllMoves(board, "black");
   if (moves.length === 0) return null;
 
@@ -192,7 +193,7 @@ function aiBestMove(board: Board): Move | null {
 
   for (const move of moves) {
     const nb = applyMove(board, move);
-    const val = minimax(nb, 3, -Infinity, Infinity, false); // depth 4 total (3 + this level)
+    const val = minimax(nb, depth, -Infinity, Infinity, false);
     if (val > bestVal) {
       bestVal = val;
       bestMove = move;
@@ -205,43 +206,47 @@ function aiBestMove(board: Board): Move | null {
 
 interface GameProps {
   onGameOver: (playerWon: boolean) => void;
+  difficulty: Difficulty;
 }
 
-export function Game({ onGameOver }: GameProps) {
+export function Game({ onGameOver, difficulty }: GameProps) {
   const [board, setBoard] = useState<Board>(createInitialBoard);
   const [selected, setSelected] = useState<Position | null>(null);
   const [validMoves, setValidMoves] = useState<Move[]>([]);
   const [turn, setTurn] = useState<Player>("red");
   const [aiThinking, setAiThinking] = useState(false);
   const gameOverRef = useRef(false);
+  const aiActiveRef = useRef(false);
   const onGameOverRef = useRef(onGameOver);
   onGameOverRef.current = onGameOver;
 
   // Compute all legal moves for the current player
   const allMoves = getAllMoves(board, turn);
 
-  // Check for game over
+  // Check for game over (only when it's the human turn and AI is idle)
   useEffect(() => {
-    if (gameOverRef.current) return;
-    if (allMoves.length === 0 && !aiThinking) {
+    if (gameOverRef.current || aiThinking) return;
+    if (turn === "red" && allMoves.length === 0) {
       gameOverRef.current = true;
-      // Current player has no moves = they lose
-      onGameOverRef.current(turn === "black"); // If black can't move, red wins
+      onGameOverRef.current(false); // Red can't move, red loses
     }
   }, [allMoves.length, turn, aiThinking]);
 
-  // AI turn
+  // AI turn — use a ref guard to survive StrictMode double-fire
   useEffect(() => {
-    if (turn !== "black" || gameOverRef.current || aiThinking) return;
+    if (turn !== "black" || gameOverRef.current || aiActiveRef.current) return;
+    aiActiveRef.current = true;
     setAiThinking(true);
 
+    const depth = DIFFICULTY_DEPTH[difficulty];
     const timer = setTimeout(() => {
-      const move = aiBestMove(board);
+      const move = aiBestMove(board, depth);
       if (!move) {
         if (!gameOverRef.current) {
           gameOverRef.current = true;
-          onGameOverRef.current(true); // AI can't move, player wins
+          onGameOverRef.current(true); // Computer can't move, player wins
         }
+        aiActiveRef.current = false;
         setAiThinking(false);
         return;
       }
@@ -250,11 +255,15 @@ export function Game({ onGameOver }: GameProps) {
       setTurn("red");
       setSelected(null);
       setValidMoves([]);
+      aiActiveRef.current = false;
       setAiThinking(false);
     }, 400);
 
-    return () => clearTimeout(timer);
-  }, [turn, board, aiThinking]);
+    return () => {
+      clearTimeout(timer);
+      aiActiveRef.current = false;
+    };
+  }, [turn, board, difficulty]);
 
   // Get moves for a specific piece (used for highlighting)
   const getMovesForPiece = useCallback(
@@ -322,12 +331,12 @@ export function Game({ onGameOver }: GameProps) {
           }}
         >
           {aiThinking
-            ? "AI is thinking..."
+            ? "Computer is thinking..."
             : turn === "red"
               ? hasJumps
                 ? "Your turn — you must jump!"
                 : "Your turn"
-              : "AI's turn"}
+              : "Computer's turn"}
         </div>
 
         {/* Board */}
@@ -452,7 +461,7 @@ export function Game({ onGameOver }: GameProps) {
               className="w-3 h-3 rounded-full"
               style={{ background: "#333", border: "1px solid #666" }}
             />
-            AI (Black)
+            Computer (Black)
           </div>
         </div>
       </div>
