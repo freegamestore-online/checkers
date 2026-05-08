@@ -2,9 +2,14 @@ import { useState, useCallback } from "react";
 import { GameShell, GameTopbar, GameAuth } from "@freegamestore/games";
 import { Game } from "./components/Game";
 import { useLeaderboard } from "./hooks/useLeaderboard";
-import type { GamePhase } from "./types";
+import type { GamePhase, Difficulty } from "./types";
 
 const BEST_SCORE_KEY = "freecheckers-best";
+const DIFFICULTY_LABELS: Record<Difficulty, string> = {
+  easy: "Easy",
+  medium: "Medium",
+  hard: "Hard",
+};
 
 function getBestScore(): number {
   const v = localStorage.getItem(BEST_SCORE_KEY);
@@ -15,6 +20,7 @@ export default function App() {
   const [phase, setPhase] = useState<GamePhase>("menu");
   const [won, setWon] = useState(false);
   const [bestScore, setBestScore] = useState(getBestScore);
+  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const { submitScore } = useLeaderboard("checkers");
 
   const handleGameOver = useCallback(
@@ -42,7 +48,10 @@ export default function App() {
       topbar={
         <GameTopbar
           title="Checkers"
-          stats={[{ label: "Wins", value: bestScore }]}
+          stats={[
+            { label: "Wins", value: bestScore },
+            { label: "Difficulty", value: DIFFICULTY_LABELS[difficulty] },
+          ]}
           actions={
             <>
               {phase !== "playing" && (
@@ -54,10 +63,29 @@ export default function App() {
           rules={
             <div>
               <h3 style={{ fontWeight: 700 }}>Checkers</h3>
-              <h4 style={{ fontWeight: 600 }}>Rules</h4>
-              <ul><li>Play red vs computer (black)</li><li>Move diagonally forward; jump to capture (mandatory)</li><li>Reach the far row to king — kings move backward too</li><li>Capture all opponent pieces to win</li></ul>
-              <h4 style={{ fontWeight: 600 }}>Controls</h4>
-              <ul><li>Tap a piece to select, tap a valid square to move</li></ul>
+              <p>Play against the computer.</p>
+              <h4 style={{ fontWeight: 600, marginTop: 8 }}>Controls</h4>
+              <ul>
+                <li>Tap a red piece to select it</li>
+                <li>Tap a highlighted square to move</li>
+                <li>Jumps are mandatory — if you can capture, you must</li>
+              </ul>
+              <h4 style={{ fontWeight: 600, marginTop: 8 }}>Rules</h4>
+              <ul>
+                <li>Red moves first</li>
+                <li>Pieces move diagonally forward</li>
+                <li>Jump over opponent pieces to capture them</li>
+                <li>Multiple jumps allowed in one turn</li>
+                <li>Reach the far row to become a King</li>
+                <li>Kings can move and capture backward</li>
+                <li>Capture all opponent pieces to win</li>
+              </ul>
+              <h4 style={{ fontWeight: 600, marginTop: 8 }}>Difficulty</h4>
+              <ul>
+                <li>Easy: computer looks 1 move ahead</li>
+                <li>Medium: 3 moves ahead</li>
+                <li>Hard: 5 moves ahead</li>
+              </ul>
             </div>
           }
         />
@@ -65,7 +93,7 @@ export default function App() {
     >
       <div className="relative w-full h-full">
         {phase === "playing" ? (
-          <Game onGameOver={handleGameOver} />
+          <Game onGameOver={handleGameOver} difficulty={difficulty} />
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-4">
             <h1
@@ -86,8 +114,27 @@ export default function App() {
               </p>
             )}
             <p style={{ color: "var(--muted)" }}>
-              Play checkers against the AI. Red moves first.
+              Play checkers against the computer. Red moves first.
             </p>
+
+            {/* Difficulty picker */}
+            <div className="flex gap-2">
+              {(["easy", "medium", "hard"] as Difficulty[]).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setDifficulty(d)}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                  style={{
+                    background: difficulty === d ? "var(--accent)" : "var(--panel)",
+                    color: difficulty === d ? "#fff" : "var(--ink)",
+                    border: `1px solid ${difficulty === d ? "var(--accent)" : "var(--line)"}`,
+                  }}
+                >
+                  {DIFFICULTY_LABELS[d]}
+                </button>
+              ))}
+            </div>
+
             <button
               onClick={start}
               className="px-6 py-3 rounded-xl font-semibold"
