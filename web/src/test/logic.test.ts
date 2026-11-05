@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createInitialBoard, getAllMoves, applyMove, aiBestMove } from "../logic";
+import { createInitialBoard, getAllMoves, applyMove, aiBestMove, landingAt, divergingStep } from "../logic";
 import type { Board } from "../types";
 
 function emptyBoard(): Board {
@@ -49,5 +49,24 @@ describe("checkers rules", () => {
     b[3]![2] = { player: "red", king: false };
     const move = aiBestMove(b, 1);
     expect(move!.captures).toEqual([{ row: 3, col: 2 }]);
+  });
+
+  it("two jump routes to the same square are told apart by their first landing", () => {
+    const b = emptyBoard();
+    b[6]![3] = { player: "red", king: false };
+    for (const [r, c] of [[5, 2], [3, 2], [5, 4], [3, 4]] as const) b[r]![c] = { player: "black", king: false };
+    const moves = getAllMoves(b, "red");
+    expect(moves).toHaveLength(2);
+    expect(moves.every((m) => m.to.row === 2 && m.to.col === 3)).toBe(true);
+    expect(divergingStep(moves)).toBe(0);
+    const firsts = moves.map((m) => landingAt(m, 0));
+    expect(firsts).toContainEqual({ row: 4, col: 1 });
+    expect(firsts).toContainEqual({ row: 4, col: 5 });
+    expect(landingAt(moves[0]!, 1)).toEqual({ row: 2, col: 3 });
+  });
+
+  it("simple moves land on their destination", () => {
+    const [m] = getAllMoves(createInitialBoard(), "red");
+    expect(landingAt(m!, 0)).toEqual(m!.to);
   });
 });

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useGameSounds } from "@freegamestore/games";
 import type { Board, Position, Move, Player, Difficulty } from "../types";
 import { DIFFICULTY_DEPTH } from "../types";
-import { createInitialBoard, getAllMoves, applyMove, aiBestMove } from "../logic";
+import { createInitialBoard, getAllMoves, applyMove, aiBestMove, landingAt, divergingStep } from "../logic";
 
 // ── Game component ──────────────────────────────────────────────
 
@@ -16,6 +16,9 @@ export function Game({ onGameOver, difficulty }: GameProps) {
   const [board, setBoard] = useState<Board>(createInitialBoard);
   const [selected, setSelected] = useState<Position | null>(null);
   const [validMoves, setValidMoves] = useState<Move[]>([]);
+  /** Set when several jump paths reach the tapped square: the jump index the player picks next. */
+  const [pathStep, setPathStep] = useState<number | null>(null);
+  const [aiMove, setAiMove] = useState<Move | null>(null);
   const [turn, setTurn] = useState<Player>("red");
   const [aiThinking, setAiThinking] = useState(false);
   const gameOverRef = useRef(false);
@@ -57,9 +60,11 @@ export function Game({ onGameOver, difficulty }: GameProps) {
       }
       const newBoard = applyMove(board, move);
       setBoard(newBoard);
+      setAiMove(move);
       setTurn("red");
       setSelected(null);
       setValidMoves([]);
+      setPathStep(null);
       aiActiveRef.current = false;
       setAiThinking(false);
     }, 400);
@@ -90,7 +95,17 @@ export function Game({ onGameOver, difficulty }: GameProps) {
 
       // If we have a selection, check if this is a valid destination
       if (selected) {
-        const move = validMoves.find((m) => m.to.row === row && m.to.col === col);
+        const matches = validMoves.filter((m) => {
+          const p = pathStep === null ? m.to : landingAt(m, pathStep);
+          return p.row === row && p.col === col;
+        });
+        if (matches.length > 1) {
+          // Several jump paths reach this square — let the player pick the route.
+          setValidMoves(matches);
+          setPathStep(divergingStep(matches));
+          return;
+        }
+        const move = matches[0];
         if (move) {
           if (move.captures.length > 0) {
             sounds.playScore();
@@ -99,14 +114,17 @@ export function Game({ onGameOver, difficulty }: GameProps) {
           }
           const newBoard = applyMove(board, move);
           setBoard(newBoard);
+          setAiMove(null);
           setSelected(null);
           setValidMoves([]);
+          setPathStep(null);
           setTurn("black");
           return;
         }
       }
 
       // Select a piece
+      setPathStep(null);
       const piece = board[row]?.[col];
       if (piece && piece.player === "red") {
         const moves = getMovesForPiece(row, col);
@@ -122,11 +140,19 @@ export function Game({ onGameOver, difficulty }: GameProps) {
         setValidMoves([]);
       }
     },
-    [turn, aiThinking, selected, validMoves, board, getMovesForPiece],
+    [turn, aiThinking, selected, validMoves, pathStep, board, getMovesForPiece],
   );
 
   // Pre-compute highlight sets for fast lookup during render
-  const validDestinations = new Set(validMoves.map((m) => `${m.to.row},${m.to.col}`));
+  const validDestinations = new Set(
+    validMoves.map((m) => {
+      const p = pathStep === null ? m.to : landingAt(m, pathStep);
+      return `${p.row},${p.col}`;
+    }),
+  );
+  const aiSquares = aiMove
+    ? new Set([`${aiMove.from.row},${aiMove.from.col}`, `${aiMove.to.row},${aiMove.to.col}`])
+    : null;
 
   return (
     <div className="flex items-center justify-center h-full w-full p-4">
@@ -143,7 +169,9 @@ export function Game({ onGameOver, difficulty }: GameProps) {
           {aiThinking
             ? "Computer is thinking..."
             : turn === "red"
-              ? hasJumps
+              ? pathStep !== null
+                ? "Several routes — tap the square to jump through"
+                : hasJumps
                 ? "Your turn — you must jump!"
                 : "Your turn"
               : "Computer's turn"}
@@ -190,6 +218,7 @@ export function Game({ onGameOver, difficulty }: GameProps) {
                       turn === "red" && !aiThinking && (piece?.player === "red" || isValidDest)
                         ? "pointer"
                         : "default",
+                    boxShadow: aiSquares?.has(`${row},${col}`) ? "inset 0 0 0 3px #facc15" : undefined,
                     touchAction: "manipulation",
                   }}
                   aria-label={`Square ${row},${col}${piece ? ` ${piece.player} ${piece.king ? "king" : "piece"}` : ""}`}

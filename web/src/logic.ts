@@ -197,3 +197,26 @@ export function aiBestMove(board: Board, depth: number): Move | null {
   }
   return bestMove;
 }
+
+/** Square a move lands on after its `step`-th jump (0-based); simple moves land on `to`. */
+export function landingAt(move: Move, step: number): Position {
+  let pos = move.from;
+  for (const cap of move.captures.slice(0, step + 1)) {
+    pos = { row: 2 * cap.row - pos.row, col: 2 * cap.col - pos.col };
+  }
+  return move.captures.length === 0 ? move.to : pos;
+}
+
+/**
+ * First jump index at which candidate moves (same piece, same destination)
+ * land on different squares — tapping that intermediate square picks the path.
+ */
+export function divergingStep(moves: Move[]): number {
+  for (let step = 0; ; step++) {
+    const squares = new Set(moves.map((m) => {
+      const p = landingAt(m, step);
+      return `${p.row},${p.col}`;
+    }));
+    if (squares.size > 1) return step;
+  }
+}

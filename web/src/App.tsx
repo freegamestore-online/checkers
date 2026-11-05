@@ -20,7 +20,7 @@ export default function App() {
   const [phase, setPhase] = useState<GamePhase>("playing");
   const [won, setWon] = useState(false);
   const [bestScore, setBestScore] = useState(getBestScore);
-  const [difficulty] = useState<Difficulty>("medium");
+  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [gameKey, setGameKey] = useState(0);
   const { submitScore } = useLeaderboard("checkers");
 
@@ -52,8 +52,26 @@ export default function App() {
           title="Checkers"
           stats={[
             { label: "Wins", value: bestScore },
-            { label: "Difficulty", value: DIFFICULTY_LABELS[difficulty] },
+            {
+              label: "Difficulty",
+              value: (
+                <select
+                  aria-label="Difficulty"
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(e.target.value as Difficulty)}
+                  className="bg-transparent cursor-pointer"
+                  style={{ font: "inherit", color: "inherit" }}
+                >
+                  {(Object.keys(DIFFICULTY_LABELS) as Difficulty[]).map((d) => (
+                    <option key={d} value={d}>
+                      {DIFFICULTY_LABELS[d]}
+                    </option>
+                  ))}
+                </select>
+              ),
+            },
           ]}
+          onRestart={start}
           actions={<GameAuth />}
           rules={
             <div>
@@ -80,6 +98,7 @@ export default function App() {
                 <li>Easy: computer looks 1 move ahead</li>
                 <li>Medium: 3 moves ahead</li>
                 <li>Hard: 5 moves ahead</li>
+                <li>Change it any time from the top bar; it applies to the computer's next move</li>
               </ul>
             </div>
           }
